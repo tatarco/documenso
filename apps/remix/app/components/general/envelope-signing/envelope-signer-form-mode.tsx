@@ -38,6 +38,7 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
     useRequiredEnvelopeSigningContext();
 
   const [pendingFieldId, setPendingFieldId] = useState<number | null>(null);
+  const [errorFieldId, setErrorFieldId] = useState<number | null>(null);
   const [draftValues, setDraftValues] = useState<Record<number, string>>({});
 
   const sortedFields = useMemo(() => {
@@ -70,10 +71,14 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
     value: string | number | number[] | boolean | null,
   ) => {
     setPendingFieldId(field.id);
+    setErrorFieldId(null);
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await signField(field.id, { type: field.type, value } as any);
+    } catch (err) {
+      setErrorFieldId(field.id);
+      throw err;
     } finally {
       setPendingFieldId(null);
     }
@@ -162,6 +167,12 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
               {field.inserted && <CheckIcon className="h-4 w-4 text-primary" />}
               {pendingFieldId === field.id && <Loader2Icon className="h-4 w-4 animate-spin" />}
             </Label>
+
+            {errorFieldId === field.id && (
+              <p className="mt-1 text-destructive text-xs">
+                <Trans>Could not save the value. Please try again.</Trans>
+              </p>
+            )}
 
             {field.type === FieldType.TEXT && renderTextLikeField(field, 'text')}
             {field.type === FieldType.NUMBER && renderTextLikeField(field, 'number')}
@@ -287,10 +298,12 @@ const CheckboxFieldControl = ({ field, disabled, onCommit }: CheckboxFieldContro
               const next = checked ? [...selected, index] : selected.filter((i) => i !== index);
 
               setSelected(next);
-              await onCommit(next);
+              await onCommit(next).catch(() => {
+                setSelected(selected);
+              });
             }}
           />
-          <Label htmlFor={`checkbox-${field.id}-${index}`}>{option.value || `${index + 1}`}</Label>
+          {option.value && <Label htmlFor={`checkbox-${field.id}-${index}`}>{option.value}</Label>}
         </div>
       ))}
     </div>
