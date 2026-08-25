@@ -278,6 +278,12 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
 
       <SignaturePadColorPicker selectedColor={selectedColor} setSelectedColor={setSelectedColor} />
 
+      <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2">
+        <span className="text-muted-foreground/60 text-xs">
+          <Trans>You can sign with your finger or mouse</Trans>
+        </span>
+      </div>
+
       <div className="absolute right-3 bottom-3 flex gap-2">
         <button
           type="button"

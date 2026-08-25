@@ -16,7 +16,7 @@ import {
   PaperclipIcon,
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
@@ -36,6 +36,7 @@ import { BrandingLogo } from '../branding-logo';
 import { DocumentSigningAttachmentsPopover } from '../document-signing/document-signing-attachments-popover';
 import { EnvelopeItemSelector } from '../envelope-editor/envelope-file-selector';
 import EnvelopeSignerForm from '../envelope-signing/envelope-signer-form';
+import EnvelopeSignerFormMode from '../envelope-signing/envelope-signer-form-mode';
 import { EnvelopeSignerHeader } from '../envelope-signing/envelope-signer-header';
 import { DocumentSigningMobileWidget } from './document-signing-mobile-widget';
 import { DocumentSigningRejectDialog } from './document-signing-reject-dialog';
@@ -65,6 +66,10 @@ export const DocumentSigningPageViewV2 = () => {
 
   const { t } = useLingui();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const isFormMode = searchParams.get('view') === 'form';
+  const [isPdfPreview, setIsPdfPreview] = useState(false);
 
   /**
    * The total remaining fields remaining for the current recipient or selected assistant recipient.
@@ -261,13 +266,26 @@ export const DocumentSigningPageViewV2 = () => {
 
             {/* Document View */}
             <div className="embed--DocumentViewer flex flex-col items-center justify-center p-2 sm:mt-4 sm:p-4">
-              {currentEnvelopeItem ? (
-                <EnvelopePdfViewer
-                  key={currentEnvelopeItem.id}
-                  customPageRenderer={EnvelopeSignerPageRenderer}
-                  scrollParentRef={scrollableContainerRef}
-                  errorMessage={PDF_VIEWER_ERROR_MESSAGES.signing}
-                />
+              {isFormMode && !isPdfPreview ? (
+                <EnvelopeSignerFormMode onShowPdf={() => setIsPdfPreview(true)} />
+              ) : currentEnvelopeItem ? (
+                <>
+                  {isFormMode && (
+                    <div className="mb-2 w-full max-w-2xl">
+                      <Button variant="outline" size="sm" onClick={() => setIsPdfPreview(false)}>
+                        <ArrowLeftIcon className="mr-2 h-4 w-4" />
+                        <Trans>Back to form</Trans>
+                      </Button>
+                    </div>
+                  )}
+
+                  <EnvelopePdfViewer
+                    key={currentEnvelopeItem.id}
+                    customPageRenderer={EnvelopeSignerPageRenderer}
+                    scrollParentRef={scrollableContainerRef}
+                    errorMessage={PDF_VIEWER_ERROR_MESSAGES.signing}
+                  />
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-32">
                   <p className="text-foreground text-sm">

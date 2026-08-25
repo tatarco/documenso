@@ -1,0 +1,203 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-08-26\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: manual\n"
+"Language: he\n"
+"Project-Id-Version: documenso\n"
+"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : n==2 ? 1 : n>10 && n%10==0 ? 2 : 3);\n"
+
+msgid "<0>{senderName} {senderEmail}</0> has invited you to sign this document"
+msgstr "הוזמנת על ידי <0>{senderName} {senderEmail}</0> לחתום על המסמך"
+
+msgid "<0>{senderName} {senderEmail}</0> on behalf of \"{0}\" has invited you to sign this document"
+msgstr "הוזמנת על ידי <0>{senderName} {senderEmail}</0> (בשם \"{0}\") לחתום על המסמך"
+
+msgid "Sign Document"
+msgstr "חתימה על המסמך"
+
+msgid "Please review the document before signing."
+msgstr "יש לעבור על המסמך לפני החתימה."
+
+msgid "Please review the document before approving."
+msgstr "יש לעבור על המסמך לפני האישור."
+
+msgid "Reject Document"
+msgstr "דחיית המסמך"
+
+msgid "Next Field"
+msgstr "לשדה הבא"
+
+msgid "Complete"
+msgstr "סיום"
+
+msgid "{0, plural, one {1 Field Remaining} other {# Fields Remaining}}"
+msgstr "{0, plural, one {נותר שדה אחד} other {נותרו # שדות}}"
+
+msgid "Click to insert field"
+msgstr "לחיצה למילוי השדה"
+
+msgid "Full Name"
+msgstr "שם מלא"
+
+msgid "Please enter your full name"
+msgstr "יש להזין שם מלא"
+
+msgid "Signature"
+msgstr "חתימה"
+
+msgid "Signer"
+msgstr "חותם"
+
+msgid "Sign as {0} <0>({1})</0>"
+msgstr "חתימה בשם {0} <0>({1})</0>"
+
+msgid "Sign as<0>{0} <1>({1})</1></0>"
+msgstr "חתימה בשם<0>{0} <1>({1})</1></0>"
+
+msgctxt "Draw signature"
+msgid "Draw"
+msgstr "ציור"
+
+msgctxt "Type signature"
+msgid "Type"
+msgstr "הקלדה"
+
+msgctxt "Upload signature"
+msgid "Upload"
+msgstr "העלאה"
+
+msgctxt "Recipient role action verb"
+msgid "Sign"
+msgstr "חתימה"
+
+msgid "Type your signature"
+msgstr "הקלדת החתימה"
+
+msgid "Upload Signature"
+msgstr "העלאת חתימה"
+
+msgid "Clear Signature"
+msgstr "ניקוי החתימה"
+
+msgid "Undo"
+msgstr "ביטול קו אחרון"
+
+msgid "Cancel"
+msgstr "ביטול"
+
+msgid "Sign"
+msgstr "חתימה"
+
+msgid "Next"
+msgstr "הבא"
+
+msgid "Continue"
+msgstr "המשך"
+
+msgid "Signature is too small"
+msgstr "החתימה קטנה מדי — יש לחתום שוב בגדול יותר"
+
+msgid "You can sign with your finger or mouse"
+msgstr "אפשר לחתום עם האצבע או העכבר"
+
+msgid "By proceeding with your electronic signature, you acknowledge and consent that it will be used to sign the given document and holds the same legal validity as a handwritten signature. By completing the electronic signing process, you affirm your understanding and acceptance of these conditions."
+msgstr "המשך התהליך מהווה הסכמה לכך שהחתימה האלקטרונית תשמש לחתימה על מסמך זה, ושתוקפה המשפטי זהה לחתימה בכתב יד."
+
+msgid "Please enter a value"
+msgstr "יש להזין ערך"
+
+msgid "Enter"
+msgstr "אישור"
+
+msgid "Close"
+msgstr "סגירה"
+
+msgid "Document Signed"
+msgstr "המסמך נחתם"
+
+msgid "Everyone has signed"
+msgstr "כל הצדדים חתמו"
+
+msgid "Everyone has signed! You will receive an email copy of the signed document."
+msgstr "כל הצדדים חתמו. עותק חתום של המסמך יישלח אליך."
+
+msgid "You will receive an email copy of the signed document once everyone has signed."
+msgstr "עותק חתום של המסמך יישלח אליך לאחר שכל הצדדים יחתמו."
+
+msgid "Waiting for others to sign"
+msgstr "ממתין לחתימת שאר הצדדים"
+
+msgid "Waiting for others to complete signing."
+msgstr "ממתין לחתימת שאר הצדדים."
+
+msgid "Waiting for others"
+msgstr "ממתין לשאר הצדדים"
+
+msgid "Download PDF"
+msgstr "הורדת PDF"
+
+msgid "Actions"
+msgstr "פעולות"
+
+msgid "Return"
+msgstr "חזרה"
+
+msgid "Share"
+msgstr "שיתוף"
+
+msgid "Go Back Home"
+msgstr "חזרה למסך הבית"
+
+msgid "Go back home"
+msgstr "חזרה למסך הבית"
+
+msgid "Page {0} of {1}"
+msgstr "עמוד {0} מתוך {1}"
+
+msgid "Page {pageNumber} of {numPages}"
+msgstr "עמוד {pageNumber} מתוך {numPages}"
+
+msgid "Reject"
+msgstr "דחייה"
+
+msgid "View document"
+msgstr "תצוגת המסמך"
+
+msgid "Back to form"
+msgstr "חזרה לטופס"
+
+msgid "Insert date"
+msgstr "הוספת תאריך"
+
+msgid "Initials"
+msgstr "ראשי תיבות"
+
+msgid "Email"
+msgstr "דוא\"ל"
+
+msgid "Date"
+msgstr "תאריך"
+
+msgid "Text"
+msgstr "טקסט"
+
+msgid "Approve Document"
+msgstr "אישור המסמך"
+
+msgid "View Document"
+msgstr "צפייה במסמך"
+
+msgid "Attachments"
+msgstr "קבצים מצורפים"
+
+msgid "Expand sidebar"
+msgstr "הרחבת הסרגל הצדי"
+
+msgid "Collapse sidebar"
+msgstr "כיווץ הסרגל הצדי"
+
+msgid "No document selected"
+msgstr "לא נבחר מסמך"
