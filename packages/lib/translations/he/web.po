@@ -237,3 +237,9 @@ msgstr "סימון כנצפה"
 
 msgid "Are you sure you want to reject this document? This action cannot be undone."
 msgstr "האם לדחות את המסמך? פעולה זו אינה ניתנת לביטול."
+
+msgid "Read the full <0>signature disclosure</0>."
+msgstr "<0>לקריאת נוסח הגילוי המלא על החתימה</0>."
+
+msgid "Could not save the value. Please try again."
+msgstr "שמירת הערך נכשלה — יש לנסות שוב."
