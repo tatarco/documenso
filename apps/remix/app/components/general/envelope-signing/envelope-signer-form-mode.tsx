@@ -59,9 +59,11 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
           return aY - bY;
         }
 
-        return Number(a.positionX) - Number(b.positionX);
+        const rowDirection = envelope.documentMeta.language === 'he' ? -1 : 1;
+
+        return rowDirection * (Number(a.positionX) - Number(b.positionX));
       });
-  }, [recipientFields]);
+  }, [recipientFields, envelope.documentMeta.language]);
 
   const commitField = async (
     field: (typeof sortedFields)[number],
@@ -117,6 +119,8 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
       <Input
         type={inputType}
         dir="auto"
+        id={`field-${field.id}`}
+        name={`field-${field.id}`}
         className="mt-2 bg-background"
         value={draft}
         disabled={pendingFieldId === field.id}
@@ -146,7 +150,7 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
       <div className="flex flex-col gap-y-5 rounded-xl border border-border bg-background p-4 sm:p-6">
         {sortedFields.map((field) => (
           <div key={field.id}>
-            <Label className="flex items-center gap-2">
+            <Label htmlFor={`field-${field.id}`} className="flex items-center gap-2">
               <span>{getFieldLabel(field)}</span>
 
               {isFieldRequired(field) && !field.inserted && (
@@ -262,8 +266,12 @@ type CheckboxFieldControlProps = {
 };
 
 const CheckboxFieldControl = ({ field, disabled, onCommit }: CheckboxFieldControlProps) => {
-  const options: Array<{ value?: string; checked?: boolean }> =
+  const definedOptions: Array<{ value?: string; checked?: boolean }> =
     field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : [];
+
+  // A checkbox field created via the API without explicit options still needs a
+  // clickable control - fall back to a single unlabeled checkbox.
+  const options = definedOptions.length > 0 ? definedOptions : [{ value: '' }];
 
   const [selected, setSelected] = useState<number[]>([]);
 
