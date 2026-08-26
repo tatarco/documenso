@@ -1,7 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i18n';
+import { ZEnvelopeUploadRequirementsSchema } from '@documenso/lib/types/envelope-upload';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
+import { trpc } from '@documenso/trpc/react';
 import { FieldType } from '@prisma/client';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
@@ -23,6 +25,8 @@ import { EnvelopeSignerPageRenderer } from '~/components/general/envelope-signin
 import { EnvelopePdfViewer } from '~/components/general/pdf-viewer/envelope-pdf-viewer';
 
 import { EnvelopeSignerCompleteDialog } from './envelope-signing-complete-dialog';
+import type { EnvelopeUploadSlotUpload } from './envelope-upload-slot';
+import { EnvelopeUploadSlot } from './envelope-upload-slot';
 
 import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-signing-provider';
 
@@ -37,13 +41,39 @@ import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-
 export default function EnvelopeSignerFormMode() {
   const { t } = useLingui();
 
-  const { envelope, recipientFields, recipientFieldsRemaining, signField, fullName, signature, setSignature } =
+  const { envelope, recipient, recipientFields, recipientFieldsRemaining, signField, fullName, signature, setSignature } =
     useRequiredEnvelopeSigningContext();
 
   const [step, setStep] = useState<'read' | 'fill'>('read');
   const [pendingFieldId, setPendingFieldId] = useState<number | null>(null);
   const [errorFieldId, setErrorFieldId] = useState<number | null>(null);
   const [draftValues, setDraftValues] = useState<Record<number, string>>({});
+
+  /**
+   * Recipient-level file upload slots (design doc §2) - form-mode only,
+   * not PDF-page fields, so they live outside `recipientFields`/`signField`.
+   */
+  const uploadRequirements = useMemo(
+    () => ZEnvelopeUploadRequirementsSchema.parse(recipient.uploadRequirements ?? []),
+    [recipient.uploadRequirements],
+  );
+
+  const [uploads, setUploads] = useState<EnvelopeUploadSlotUpload[]>([]);
+
+  const { data: uploadsData } = trpc.envelope.upload.find.useQuery(
+    { envelopeId: envelope.id, token: recipient.token },
+    { enabled: uploadRequirements.length > 0 },
+  );
+
+  useEffect(() => {
+    if (uploadsData) {
+      setUploads(uploadsData.data);
+    }
+  }, [uploadsData]);
+
+  const requiredUploadsRemaining = uploadRequirements.filter(
+    (requirement) => requirement.required && !uploads.some((upload) => upload.slotKey === requirement.key),
+  ).length;
 
   const readScrollRef = useRef<HTMLDivElement>(null);
   const fillPreviewScrollRef = useRef<HTMLDivElement>(null);
@@ -142,10 +172,27 @@ export default function EnvelopeSignerFormMode() {
    * Scroll the FORM (not the PDF) to the next required unfilled field,
    * revealing its repeat instance / section if collapsed.
    */
+  const scrollToNextUploadSlot = () => {
+    const next = uploadRequirements.find(
+      (requirement) => requirement.required && !uploads.some((upload) => upload.slotKey === requirement.key),
+    );
+
+    if (!next) {
+      return;
+    }
+
+    setTimeout(() => {
+      document
+        .querySelector(`[data-upload-slot-anchor="${next.key}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+  };
+
   const scrollToNextFormField = () => {
     const next = recipientFieldsRemaining[0];
 
     if (!next) {
+      scrollToNextUploadSlot();
       return;
     }
 
@@ -545,17 +592,44 @@ export default function EnvelopeSignerFormMode() {
                 </div>
               );
             })}
+
+            {uploadRequirements.length > 0 && (
+              <div className="rounded-lg border border-border p-3">
+                <span className="font-medium text-sm">
+                  <Trans>File uploads</Trans>
+                </span>
+
+                <div className="mt-3 flex flex-col gap-y-4">
+                  {uploadRequirements.map((requirement) => (
+                    <EnvelopeUploadSlot
+                      key={requirement.key}
+                      token={recipient.token}
+                      slot={requirement}
+                      upload={uploads.find((upload) => upload.slotKey === requirement.key)}
+                      onUploaded={(upload) =>
+                        setUploads((prev) => [...prev.filter((u) => u.slotKey !== upload.slotKey), upload])
+                      }
+                      onRemoved={(slotKey) => setUploads((prev) => prev.filter((u) => u.slotKey !== slotKey))}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 flex flex-col items-stretch gap-2 border-border border-t pt-4 [&_button]:w-full">
-            {recipientFieldsRemaining.length > 0 ? (
+            {recipientFieldsRemaining.length > 0 || requiredUploadsRemaining > 0 ? (
               <>
                 <Button type="button" size="lg" onClick={() => scrollToNextFormField()}>
                   <Trans>Next Field</Trans>
                 </Button>
 
                 <p className="text-center text-muted-foreground text-xs">
-                  <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
+                  <Plural
+                    value={recipientFieldsRemaining.length + requiredUploadsRemaining}
+                    one="1 Field Remaining"
+                    other="# Fields Remaining"
+                  />
                 </p>
               </>
             ) : (

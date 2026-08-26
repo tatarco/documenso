@@ -1,6 +1,7 @@
 import { DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
 import { DEFAULT_DOCUMENT_TIME_ZONE } from '@documenso/lib/constants/time-zones';
 import { DOCUMENT_AUDIT_LOG_TYPE, RECIPIENT_DIFF_TYPE } from '@documenso/lib/types/document-audit-logs';
+import { ZEnvelopeUploadRequirementsSchema } from '@documenso/lib/types/envelope-upload';
 import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
@@ -311,6 +312,30 @@ export const completeDocumentWithToken = async ({
       message: `Recipient ${recipient.id} has unsigned fields`,
       statusCode: 400,
     });
+  }
+
+  const uploadRequirements = ZEnvelopeUploadRequirementsSchema.parse(recipient.uploadRequirements ?? []);
+  const requiredUploadSlots = uploadRequirements.filter((requirement) => requirement.required);
+
+  if (requiredUploadSlots.length > 0) {
+    const uploads = await prisma.envelopeUpload.findMany({
+      where: {
+        recipientId: recipient.id,
+      },
+      select: {
+        slotKey: true,
+      },
+    });
+
+    const uploadedSlotKeys = new Set(uploads.map((upload) => upload.slotKey));
+    const missingSlot = requiredUploadSlots.find((slot) => !uploadedSlotKeys.has(slot.key));
+
+    if (missingSlot) {
+      throw new AppError(AppErrorCode.RECIPIENT_HAS_MISSING_UPLOADS, {
+        message: `Recipient ${recipient.id} is missing a required upload for slot "${missingSlot.key}"`,
+        statusCode: 400,
+      });
+    }
   }
 
   await prisma.$transaction(async (tx) => {
