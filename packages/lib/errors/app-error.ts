@@ -52,6 +52,12 @@ export enum AppErrorCode {
   RECIPIENT_HAS_UNSIGNED_FIELDS = 'RECIPIENT_HAS_UNSIGNED_FIELDS',
 
   /**
+   * A completion request was made for a recipient that still has required
+   * upload slots which have not received a file.
+   */
+  RECIPIENT_HAS_MISSING_UPLOADS = 'RECIPIENT_HAS_MISSING_UPLOADS',
+
+  /**
    * A completion request was made by a recipient in a sequential signing flow
    * before the preceding recipients have signed.
    */
@@ -114,6 +120,7 @@ export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; 
   [AppErrorCode.ENVELOPE_TSP_LOCKED]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.MISSING_SIGNATURE_FIELD]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.RECIPIENT_HAS_UNSIGNED_FIELDS]: { code: 'BAD_REQUEST', status: 400 },
+  [AppErrorCode.RECIPIENT_HAS_MISSING_UPLOADS]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.RECIPIENT_OUT_OF_TURN]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.CSC_INSTANCE_MODE_MISMATCH]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.CSC_UNLICENSED]: { code: 'FORBIDDEN', status: 403 },

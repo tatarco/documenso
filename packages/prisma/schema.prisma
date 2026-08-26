@@ -485,6 +485,7 @@ model Envelope {
   documentMeta   DocumentMeta @relation(fields: [documentMetaId], references: [id])
 
   envelopeAttachments EnvelopeAttachment[]
+  envelopeUploads     EnvelopeUpload[]
 
   @@index([type])
   @@index([status])
@@ -544,11 +545,12 @@ enum DocumentSigningOrder {
 }
 
 model DocumentData {
-  id           String           @id @default(cuid())
-  type         DocumentDataType
-  data         String
-  initialData  String
-  envelopeItem EnvelopeItem?
+  id             String           @id @default(cuid())
+  type           DocumentDataType
+  data           String
+  initialData    String
+  envelopeItem   EnvelopeItem?
+  envelopeUpload EnvelopeUpload?
 }
 
 enum DocumentDistributionMethod {
@@ -603,6 +605,35 @@ model EnvelopeAttachment {
   @@index([envelopeId])
 }
 
+/// @zod.import(["import { ZEnvelopeUploadRequirementsSchema } from '@documenso/lib/types/envelope-upload';"])
+model EnvelopeUpload {
+  id String @id @default(cuid())
+
+  slotKey String
+
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  sha256           String
+
+  uploadedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  envelopeId String
+  envelope   Envelope @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
+
+  recipientId Int
+  recipient   Recipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  documentDataId String       @unique
+  documentData   DocumentData @relation(fields: [documentDataId], references: [id], onDelete: Cascade)
+
+  @@unique([recipientId, slotKey])
+  @@index([envelopeId])
+  @@index([recipientId])
+}
+
 enum ReadStatus {
   NOT_OPENED
   OPENED
@@ -627,7 +658,7 @@ enum RecipientRole {
   ASSISTANT
 }
 
-/// @zod.import(["import { ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';"])
+/// @zod.import(["import { ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';", "import { ZEnvelopeUploadRequirementsSchema } from '@documenso/lib/types/envelope-upload';"])
 model Recipient {
   id                   Int           @id @default(autoincrement())
   envelopeId           String
@@ -653,6 +684,9 @@ model Recipient {
   envelope             Envelope      @relation(fields: [envelopeId], references: [id], onDelete: Cascade)
   fields               Field[]
   signatures           Signature[]
+
+  uploadRequirements Json? /// [EnvelopeUploadRequirements] @zod.custom.use(ZEnvelopeUploadRequirementsSchema)
+  uploads            EnvelopeUpload[]
 
   cscCredential CscCredential?
   cscSession    CscSession?
