@@ -43,6 +43,9 @@ import { signEnvelopeFieldRoute } from './sign-envelope-field';
 import { signingStatusEnvelopeRoute } from './signing-status-envelope';
 import { updateEnvelopeRoute } from './update-envelope';
 import { updateEnvelopeItemsRoute } from './update-envelope-items';
+import { createUploadRoute } from './upload/create-upload';
+import { deleteUploadRoute } from './upload/delete-upload';
+import { findUploadsRoute } from './upload/find-uploads';
 import { useEnvelopeRoute } from './use-envelope';
 
 /**
@@ -56,6 +59,11 @@ export const envelopeRouter = router({
     create: createAttachmentRoute,
     update: updateAttachmentRoute,
     delete: deleteAttachmentRoute,
+  },
+  upload: {
+    find: findUploadsRoute,
+    create: createUploadRoute,
+    delete: deleteUploadRoute,
   },
   item: {
     getMany: getEnvelopeItemsRoute,
