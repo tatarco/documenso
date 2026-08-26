@@ -48,7 +48,11 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   // isLabel tracks whether we're rendering the field type name (like "Text", "Date", "Email")
   // or a user label — overflow should not apply to these, only to actual content.
   let isLabel = true;
-  let textToRender: string = fieldMeta?.label || fieldTypeName;
+  // Grouped labels ("Section :: Item" / "Group :: #N :: Item") render only the
+  // item part as the on-document placeholder.
+  const shortLabel = fieldMeta?.label?.split(' :: ').pop();
+
+  let textToRender: string = shortLabel || fieldTypeName;
   let textAlign: 'left' | 'center' | 'right' = 'center';
   let textVerticalAlign: 'top' | 'middle' | 'bottom' = FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
   let textLineHeight = FIELD_DEFAULT_LINE_HEIGHT;
