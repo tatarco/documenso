@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
+import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i18n';
 import { extractInitials } from '@documenso/lib/utils/recipient-formatter';
 import { FieldType } from '@prisma/client';
 import { Button } from '@documenso/ui/primitives/button';
@@ -15,31 +16,34 @@ import {
   SelectValue,
 } from '@documenso/ui/primitives/select';
 import { SignaturePadDialog } from '@documenso/ui/primitives/signature-pad/signature-pad-dialog';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { CheckIcon, FileTextIcon, Loader2Icon } from 'lucide-react';
+import { Plural, Trans, useLingui } from '@lingui/react/macro';
+import { CheckIcon, Loader2Icon, PenLineIcon } from 'lucide-react';
+
+import { EnvelopePdfViewer } from '~/components/general/pdf-viewer/envelope-pdf-viewer';
 
 import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-signing-provider';
 
-export type EnvelopeSignerFormModeProps = {
-  onShowPdf: () => void;
-};
-
 /**
- * Form-style filling for the signing page: renders the recipient's fields as a
- * vertical labeled form (FillFaster-style) instead of boxes drawn on the PDF.
+ * Form-style signing (FillFaster-style), activated via `?view=form`.
  *
- * Activated via `?view=form` on the signing URL. The PDF stays available as a
- * preview toggle. Completion/rejection stay in the existing header/sidebar.
+ * Flow: the signer READS the document first (plain, non-interactive preview),
+ * then continues to a labeled vertical form. On large screens the fill step
+ * shows the read-only document beside the form; on small screens the form
+ * stands alone with a toggle back to the document.
  */
-export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerFormModeProps) {
+export default function EnvelopeSignerFormMode() {
   const { t } = useLingui();
 
-  const { envelope, recipientFields, signField, fullName, signature, setSignature } =
+  const { envelope, recipientFields, recipientFieldsRemaining, signField, fullName, signature, setSignature } =
     useRequiredEnvelopeSigningContext();
 
+  const [step, setStep] = useState<'read' | 'fill'>('read');
   const [pendingFieldId, setPendingFieldId] = useState<number | null>(null);
   const [errorFieldId, setErrorFieldId] = useState<number | null>(null);
   const [draftValues, setDraftValues] = useState<Record<number, string>>({});
+
+  const readScrollRef = useRef<HTMLDivElement>(null);
+  const fillPreviewScrollRef = useRef<HTMLDivElement>(null);
 
   const sortedFields = useMemo(() => {
     return [...recipientFields]
@@ -126,7 +130,7 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
         dir="auto"
         id={`field-${field.id}`}
         name={`field-${field.id}`}
-        className="mt-2 bg-background"
+        className="mt-1.5 bg-background"
         value={draft}
         disabled={pendingFieldId === field.id}
         onChange={(e) => setDraftValues((prev) => ({ ...prev, [field.id]: e.target.value }))}
@@ -141,129 +145,181 @@ export default function EnvelopeSignerFormMode({ onShowPdf }: EnvelopeSignerForm
     );
   };
 
-  return (
-    <div className="mx-auto w-full max-w-2xl px-2 py-4 sm:px-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold text-foreground text-lg">{envelope.title}</h2>
+  const documentPreview = (scrollRef: React.RefObject<HTMLDivElement | null>) => (
+    <EnvelopePdfViewer scrollParentRef={scrollRef} errorMessage={PDF_VIEWER_ERROR_MESSAGES.signing} />
+  );
 
-        <Button variant="outline" size="sm" onClick={() => onShowPdf()}>
-          <FileTextIcon className="mr-2 h-4 w-4" />
-          <Trans>View document</Trans>
-        </Button>
+  /**
+   * STEP 1 - read the document before anything can be filled.
+   */
+  if (step === 'read') {
+    return (
+      <div className="flex h-full w-full flex-col">
+        <div ref={readScrollRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto flex w-full max-w-[820px] flex-col items-center px-2 py-4 sm:px-4">
+            <h2 className="mb-4 w-full font-semibold text-foreground text-lg">{envelope.title}</h2>
+            {documentPreview(readScrollRef)}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 z-30 border-border border-t bg-background/95 p-3 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-[820px] items-center justify-between gap-4">
+            <span className="text-muted-foreground text-sm">
+              <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
+            </span>
+
+            <Button size="lg" onClick={() => setStep('fill')}>
+              <PenLineIcon className="mr-2 h-4 w-4" />
+              <Trans>Continue to fill</Trans>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * STEP 2 - fill: form beside a read-only preview on large screens,
+   * form alone on small screens.
+   */
+  return (
+    <div className="flex h-full w-full">
+      {/* Read-only document preview (large screens only). */}
+      <div
+        ref={fillPreviewScrollRef}
+        className="hidden min-h-0 flex-1 overflow-y-auto border-border border-e bg-muted/30 lg:block"
+      >
+        <div className="mx-auto flex w-full max-w-[780px] flex-col items-center px-4 py-4">
+          {documentPreview(fillPreviewScrollRef)}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-y-5 rounded-xl border border-border bg-background p-4 sm:p-6">
-        {sortedFields.map((field) => (
-          <div key={field.id}>
-            <Label htmlFor={`field-${field.id}`} className="flex items-center gap-2">
-              <span>{getFieldLabel(field)}</span>
+      {/* The form. */}
+      <div className="min-h-0 w-full overflow-y-auto lg:w-[30rem] lg:flex-shrink-0">
+        <div className="flex min-h-full flex-col px-3 py-4 sm:px-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-foreground text-base">{envelope.title}</h2>
 
-              {isFieldRequired(field) && !field.inserted && (
-                <span className="text-destructive" aria-hidden="true">
-                  *
-                </span>
-              )}
-
-              {field.inserted && <CheckIcon className="h-4 w-4 text-primary" />}
-              {pendingFieldId === field.id && <Loader2Icon className="h-4 w-4 animate-spin" />}
-            </Label>
-
-            {errorFieldId === field.id && (
-              <p className="mt-1 text-destructive text-xs">
-                <Trans>Could not save the value. Please try again.</Trans>
-              </p>
-            )}
-
-            {field.type === FieldType.TEXT && renderTextLikeField(field, 'text')}
-            {field.type === FieldType.NUMBER && renderTextLikeField(field, 'number')}
-            {field.type === FieldType.EMAIL && renderTextLikeField(field, 'email')}
-            {field.type === FieldType.NAME && renderTextLikeField(field, 'text', fullName ?? '')}
-            {field.type === FieldType.INITIALS &&
-              renderTextLikeField(field, 'text', fullName ? extractInitials(fullName) : '')}
-
-            {field.type === FieldType.DATE && (
-              <div className="mt-2">
-                <Button
-                  type="button"
-                  variant={field.inserted ? 'secondary' : 'outline'}
-                  size="sm"
-                  disabled={pendingFieldId === field.id}
-                  onClick={async () => commitField(field, !field.inserted)}
-                >
-                  {field.inserted ? (field.customText ?? '') : <Trans>Insert date</Trans>}
-                </Button>
-              </div>
-            )}
-
-            {field.type === FieldType.DROPDOWN && (
-              <Select
-                value={field.inserted ? (field.customText ?? undefined) : undefined}
-                disabled={pendingFieldId === field.id}
-                onValueChange={async (value) => commitField(field, value)}
-              >
-                <SelectTrigger className="mt-2 bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
-                    (option, index) => (
-                      <SelectItem key={index} value={'value' in option ? option.value : String(index)}>
-                        {'value' in option ? option.value : String(index)}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-
-            {field.type === FieldType.RADIO && (
-              <RadioGroup
-                className="mt-2 gap-2"
-                value={field.inserted ? field.customText : undefined}
-                disabled={pendingFieldId === field.id}
-                onValueChange={async (value) => commitField(field, Number(value))}
-              >
-                {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
-                  (option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <RadioGroupItem id={`radio-${field.id}-${index}`} value={String(index)} />
-                      <Label htmlFor={`radio-${field.id}-${index}`}>
-                        {'value' in option ? option.value : String(index)}
-                      </Label>
-                    </div>
-                  ),
-                )}
-              </RadioGroup>
-            )}
-
-            {field.type === FieldType.CHECKBOX && (
-              <CheckboxFieldControl
-                field={field}
-                disabled={pendingFieldId === field.id}
-                onCommit={async (indices) => commitField(field, indices)}
-              />
-            )}
-
-            {field.type === FieldType.SIGNATURE && (
-              <SignaturePadDialog
-                className="mt-2"
-                disabled={pendingFieldId === field.id}
-                fullName={fullName}
-                value={signature ?? ''}
-                onChange={async (value) => {
-                  setSignature(value ?? '');
-
-                  if (value) {
-                    await commitField(field, value);
-                  }
-                }}
-                typedSignatureEnabled={envelope.documentMeta.typedSignatureEnabled}
-                uploadSignatureEnabled={envelope.documentMeta.uploadSignatureEnabled}
-                drawSignatureEnabled={envelope.documentMeta.drawSignatureEnabled}
-              />
-            )}
+            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setStep('read')}>
+              <Trans>View document</Trans>
+            </Button>
           </div>
-        ))}
+
+          <div className="flex flex-col gap-y-4">
+            {sortedFields.map((field) => (
+              <div key={field.id}>
+                <Label htmlFor={`field-${field.id}`} className="flex items-center gap-2 text-sm">
+                  <span>{getFieldLabel(field)}</span>
+
+                  {isFieldRequired(field) && !field.inserted && (
+                    <span className="text-destructive" aria-hidden="true">
+                      *
+                    </span>
+                  )}
+
+                  {field.inserted && <CheckIcon className="h-4 w-4 text-primary" />}
+                  {pendingFieldId === field.id && <Loader2Icon className="h-4 w-4 animate-spin" />}
+                </Label>
+
+                {errorFieldId === field.id && (
+                  <p className="mt-1 text-destructive text-xs">
+                    <Trans>Could not save the value. Please try again.</Trans>
+                  </p>
+                )}
+
+                {field.type === FieldType.TEXT && renderTextLikeField(field, 'text')}
+                {field.type === FieldType.NUMBER && renderTextLikeField(field, 'number')}
+                {field.type === FieldType.EMAIL && renderTextLikeField(field, 'email')}
+                {field.type === FieldType.NAME && renderTextLikeField(field, 'text', fullName ?? '')}
+                {field.type === FieldType.INITIALS &&
+                  renderTextLikeField(field, 'text', fullName ? extractInitials(fullName) : '')}
+
+                {field.type === FieldType.DATE && (
+                  <div className="mt-1.5">
+                    <Button
+                      type="button"
+                      variant={field.inserted ? 'secondary' : 'outline'}
+                      size="sm"
+                      disabled={pendingFieldId === field.id}
+                      onClick={async () => commitField(field, !field.inserted)}
+                    >
+                      {field.inserted ? (field.customText ?? '') : <Trans>Insert date</Trans>}
+                    </Button>
+                  </div>
+                )}
+
+                {field.type === FieldType.DROPDOWN && (
+                  <Select
+                    value={field.inserted ? (field.customText ?? undefined) : undefined}
+                    disabled={pendingFieldId === field.id}
+                    onValueChange={async (value) => commitField(field, value)}
+                  >
+                    <SelectTrigger className="mt-1.5 bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
+                        (option, index) => (
+                          <SelectItem key={index} value={'value' in option ? option.value : String(index)}>
+                            {'value' in option ? option.value : String(index)}
+                          </SelectItem>
+                        ),
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {field.type === FieldType.RADIO && (
+                  <RadioGroup
+                    className="mt-1.5 gap-2"
+                    value={field.inserted ? field.customText : undefined}
+                    disabled={pendingFieldId === field.id}
+                    onValueChange={async (value) => commitField(field, Number(value))}
+                  >
+                    {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
+                      (option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <RadioGroupItem id={`radio-${field.id}-${index}`} value={String(index)} />
+                          <Label htmlFor={`radio-${field.id}-${index}`}>
+                            {'value' in option ? option.value : String(index)}
+                          </Label>
+                        </div>
+                      ),
+                    )}
+                  </RadioGroup>
+                )}
+
+                {field.type === FieldType.CHECKBOX && (
+                  <CheckboxFieldControl
+                    field={field}
+                    disabled={pendingFieldId === field.id}
+                    onCommit={async (indices) => commitField(field, indices)}
+                  />
+                )}
+
+                {field.type === FieldType.SIGNATURE && (
+                  <div className="mt-1.5 max-w-[16rem]">
+                    <SignaturePadDialog
+                      disabled={pendingFieldId === field.id}
+                      fullName={fullName}
+                      value={signature ?? ''}
+                      onChange={async (value) => {
+                        setSignature(value ?? '');
+
+                        if (value) {
+                          await commitField(field, value);
+                        }
+                      }}
+                      typedSignatureEnabled={envelope.documentMeta.typedSignatureEnabled}
+                      uploadSignatureEnabled={envelope.documentMeta.uploadSignatureEnabled}
+                      drawSignatureEnabled={envelope.documentMeta.drawSignatureEnabled}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -287,7 +343,7 @@ const CheckboxFieldControl = ({ field, disabled, onCommit }: CheckboxFieldContro
   const [selected, setSelected] = useState<number[]>([]);
 
   return (
-    <div className="mt-2 flex flex-col gap-2">
+    <div className="mt-1.5 flex flex-col gap-2">
       {options.map((option, index) => (
         <div key={index} className="flex items-center gap-2">
           <Checkbox

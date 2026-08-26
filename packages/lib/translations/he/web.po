@@ -243,3 +243,6 @@ msgstr "<0>לקריאת נוסח הגילוי המלא על החתימה</0>."
 
 msgid "Could not save the value. Please try again."
 msgstr "שמירת הערך נכשלה — יש לנסות שוב."
+
+msgid "Continue to fill"
+msgstr "המשך למילוי"
