@@ -15,6 +15,12 @@ export const createEnvelopeRecipientsMeta: TrpcRouteMeta = {
   },
 };
 
+export const ZCreateEnvelopeRecipientUploadSlotSchema = z.object({
+  id: z.string().min(1).describe('A unique key for this upload slot, e.g. "id_photo".'),
+  label: z.string().min(1).describe('The label shown to the signer, e.g. "Photo ID".'),
+  required: z.boolean().describe('Whether the recipient must upload a file to complete signing.'),
+});
+
 export const ZCreateEnvelopeRecipientSchema = z.object({
   email: ZRecipientEmailSchema,
   name: z.string().max(255),
@@ -22,6 +28,10 @@ export const ZCreateEnvelopeRecipientSchema = z.object({
   signingOrder: z.number().optional(),
   accessAuth: z.array(ZRecipientAccessAuthTypesSchema).default([]).optional(),
   actionAuth: z.array(ZRecipientActionAuthTypesSchema).default([]).optional(),
+  uploadSlots: z
+    .array(ZCreateEnvelopeRecipientUploadSlotSchema)
+    .optional()
+    .describe('File upload slots this recipient must fill in during signing.'),
 });
 
 export const ZCreateEnvelopeRecipientsRequestSchema = z.object({

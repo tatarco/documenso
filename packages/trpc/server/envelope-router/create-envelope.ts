@@ -147,6 +147,7 @@ export const createEnvelopeRouteCaller = async ({
     signingOrder: recipient.signingOrder,
     accessAuth: recipient.accessAuth,
     actionAuth: recipient.actionAuth,
+    uploadSlots: recipient.uploadSlots,
     fields: recipient.fields?.map((field) => {
       let documentDataId: string | undefined;
 

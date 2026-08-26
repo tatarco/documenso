@@ -28,6 +28,7 @@ import type {
 } from '../../types/document-auth';
 import type { TDocumentFormValues } from '../../types/document-form-values';
 import type { TEnvelopeAttachmentType } from '../../types/envelope-attachment';
+import { ENVELOPE_UPLOAD_ALLOWED_MIME_TYPES, ENVELOPE_UPLOAD_MAX_SIZE_BYTES } from '../../types/envelope-upload';
 import type { TFieldAndMeta } from '../../types/field-meta';
 import type { TSignatureLevel } from '../../types/signature-level';
 import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../types/webhook-payload';
@@ -53,6 +54,12 @@ type CreateEnvelopeRecipientFieldOptions = TFieldAndMeta & {
   height: number;
 };
 
+type CreateEnvelopeRecipientUploadSlotOptions = {
+  id: string;
+  label: string;
+  required: boolean;
+};
+
 type CreateEnvelopeRecipientOptions = {
   email: string;
   name: string;
@@ -61,6 +68,7 @@ type CreateEnvelopeRecipientOptions = {
   accessAuth?: TRecipientAccessAuthTypes[];
   actionAuth?: TRecipientActionAuthTypes[];
   fields?: CreateEnvelopeRecipientFieldOptions[];
+  uploadSlots?: CreateEnvelopeRecipientUploadSlotOptions[];
 };
 
 export type CreateEnvelopeOptions = {
@@ -455,6 +463,14 @@ export const createEnvelope = async ({
           };
         });
 
+        const uploadRequirements = recipient.uploadSlots?.map((slot) => ({
+          key: slot.id,
+          label: slot.label,
+          required: slot.required,
+          accept: [...ENVELOPE_UPLOAD_ALLOWED_MIME_TYPES],
+          maxSizeBytes: ENVELOPE_UPLOAD_MAX_SIZE_BYTES,
+        }));
+
         await tx.recipient.create({
           data: {
             envelopeId: envelope.id,
@@ -466,6 +482,7 @@ export const createEnvelope = async ({
             sendStatus: recipient.role === RecipientRole.CC ? SendStatus.SENT : SendStatus.NOT_SENT,
             signingStatus: recipient.role === RecipientRole.CC ? SigningStatus.SIGNED : SigningStatus.NOT_SIGNED,
             authOptions: recipientAuthOptions,
+            uploadRequirements,
             fields: {
               createMany: {
                 data: recipientFieldsToCreate,
