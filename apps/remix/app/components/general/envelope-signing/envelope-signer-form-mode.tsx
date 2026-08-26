@@ -76,7 +76,7 @@ export default function EnvelopeSignerFormMode() {
   /**
    * Structured form entries parsed from a label convention:
    * - "Section :: Item"        -> collapsible section group
-   * - "Group :: #N :: Item"    -> repeating group (accordion instances, add-one-at-a-time)
+   * - "Group :: #N :: Item"    -> repeating group (add-one-at-a-time)
    * - anything else            -> flat field
    * A group renders at the position of its first field, keeping table clusters together.
    */
@@ -264,7 +264,126 @@ export default function EnvelopeSignerFormMode() {
                   {field.inserted ? (field.customText ?? '') : <Trans>Insert date</Trans>}
                 </Button>
               </div>
-            )          <div className="flex flex-col gap-y-4">
+            )}
+
+            {field.type === FieldType.DROPDOWN && (
+              <Select
+                value={field.inserted ? (field.customText ?? undefined) : undefined}
+                disabled={pendingFieldId === field.id}
+                onValueChange={async (value) => commitField(field, value)}
+              >
+                <SelectTrigger className="mt-1.5 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
+                    (option, index) => (
+                      <SelectItem key={index} value={'value' in option ? option.value : String(index)}>
+                        {'value' in option ? option.value : String(index)}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+
+            {field.type === FieldType.RADIO && (
+              <RadioGroup
+                className="mt-1.5 gap-2"
+                value={field.inserted ? field.customText : undefined}
+                disabled={pendingFieldId === field.id}
+                onValueChange={async (value) => commitField(field, Number(value))}
+              >
+                {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
+                  (option, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <RadioGroupItem id={`radio-${field.id}-${index}`} value={String(index)} />
+                      <Label htmlFor={`radio-${field.id}-${index}`}>
+                        {'value' in option ? option.value : String(index)}
+                      </Label>
+                    </div>
+                  ),
+                )}
+              </RadioGroup>
+            )}
+
+            {field.type === FieldType.CHECKBOX && (
+              <CheckboxFieldControl
+                field={field}
+                disabled={pendingFieldId === field.id}
+                onCommit={async (indices) => commitField(field, indices)}
+              />
+            )}
+
+            {field.type === FieldType.SIGNATURE && (
+              <div className="mt-1.5 max-w-[16rem]">
+                <SignaturePadDialog
+                  disabled={pendingFieldId === field.id}
+                  fullName={fullName}
+                  value={signature ?? ''}
+                  onChange={async (value) => {
+                    setSignature(value ?? '');
+
+                    if (value) {
+                      await commitField(field, value);
+                    }
+                  }}
+                  typedSignatureEnabled={envelope.documentMeta.typedSignatureEnabled}
+                  uploadSignatureEnabled={envelope.documentMeta.uploadSignatureEnabled}
+                  drawSignatureEnabled={envelope.documentMeta.drawSignatureEnabled}
+                />
+              </div>
+            )}
+    </div>
+  );
+
+  /**
+   * STEP 1 - read the document before anything can be filled.
+   */
+  if (step === 'read') {
+    return (
+      <div className="flex h-full w-full flex-col">
+        <div ref={readScrollRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto flex w-full max-w-[820px] flex-col items-center px-2 py-4 sm:px-4">
+            <h2 className="mb-4 w-full font-semibold text-foreground text-lg">{envelope.title}</h2>
+            {documentPreview(readScrollRef)}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 z-30 border-border border-t bg-background/95 p-3 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-[820px] items-center justify-between gap-4">
+            <span className="text-muted-foreground text-sm">
+              <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
+            </span>
+
+            <Button size="lg" onClick={() => setStep('fill')}>
+              <PenLineIcon className="mr-2 h-4 w-4" />
+              <Trans>Continue to fill</Trans>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * STEP 2 - fill: form beside a read-only preview on large screens,
+   * form alone on small screens.
+   */
+  return (
+    <div className="flex h-full w-full">
+      {/* The form - first in DOM so it sits on the start side (right for RTL documents). */}
+      <div className="min-h-0 w-full overflow-y-auto border-border lg:w-[30rem] lg:flex-shrink-0 lg:border-e">
+        <div className="flex min-h-full flex-col px-3 py-4 sm:px-5">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-foreground text-base">{envelope.title}</h2>
+
+            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setStep('read')}>
+              <Trans>View document</Trans>
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-y-4">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {formEntries.map((entry: any) => {
               if (entry.kind === 'field') {
@@ -333,112 +452,6 @@ export default function EnvelopeSignerFormMode() {
                 </div>
               );
             })}
-          </div>estructive" aria-hidden="true">
-                      *
-                    </span>
-                  )}
-
-                  {field.inserted && <CheckIcon className="h-4 w-4 text-primary" />}
-                  {pendingFieldId === field.id && <Loader2Icon className="h-4 w-4 animate-spin" />}
-                </Label>
-
-                {errorFieldId === field.id && (
-                  <p className="mt-1 text-destructive text-xs">
-                    <Trans>Could not save the value. Please try again.</Trans>
-                  </p>
-                )}
-
-                {field.type === FieldType.TEXT && renderTextLikeField(field, 'text')}
-                {field.type === FieldType.NUMBER && renderTextLikeField(field, 'number')}
-                {field.type === FieldType.EMAIL && renderTextLikeField(field, 'email')}
-                {field.type === FieldType.NAME && renderTextLikeField(field, 'text', fullName ?? '')}
-                {field.type === FieldType.INITIALS &&
-                  renderTextLikeField(field, 'text', fullName ? extractInitials(fullName) : '')}
-
-                {field.type === FieldType.DATE && (
-                  <div className="mt-1.5">
-                    <Button
-                      type="button"
-                      variant={field.inserted ? 'secondary' : 'outline'}
-                      size="sm"
-                      disabled={pendingFieldId === field.id}
-                      onClick={async () => commitField(field, !field.inserted)}
-                    >
-                      {field.inserted ? (field.customText ?? '') : <Trans>Insert date</Trans>}
-                    </Button>
-                  </div>
-                )}
-
-                {field.type === FieldType.DROPDOWN && (
-                  <Select
-                    value={field.inserted ? (field.customText ?? undefined) : undefined}
-                    disabled={pendingFieldId === field.id}
-                    onValueChange={async (value) => commitField(field, value)}
-                  >
-                    <SelectTrigger className="mt-1.5 bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
-                        (option, index) => (
-                          <SelectItem key={index} value={'value' in option ? option.value : String(index)}>
-                            {'value' in option ? option.value : String(index)}
-                          </SelectItem>
-                        ),
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {field.type === FieldType.RADIO && (
-                  <RadioGroup
-                    className="mt-1.5 gap-2"
-                    value={field.inserted ? field.customText : undefined}
-                    disabled={pendingFieldId === field.id}
-                    onValueChange={async (value) => commitField(field, Number(value))}
-                  >
-                    {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
-                      (option, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <RadioGroupItem id={`radio-${field.id}-${index}`} value={String(index)} />
-                          <Label htmlFor={`radio-${field.id}-${index}`}>
-                            {'value' in option ? option.value : String(index)}
-                          </Label>
-                        </div>
-                      ),
-                    )}
-                  </RadioGroup>
-                )}
-
-                {field.type === FieldType.CHECKBOX && (
-                  <CheckboxFieldControl
-                    field={field}
-                    disabled={pendingFieldId === field.id}
-                    onCommit={async (indices) => commitField(field, indices)}
-                  />
-                )}
-
-                {field.type === FieldType.SIGNATURE && (
-                  <div className="mt-1.5 max-w-[16rem]">
-                    <SignaturePadDialog
-                      disabled={pendingFieldId === field.id}
-                      fullName={fullName}
-                      value={signature ?? ''}
-                      onChange={async (value) => {
-                        setSignature(value ?? '');
-
-                        if (value) {
-                          await commitField(field, value);
-                        }
-                      }}
-                      typedSignatureEnabled={envelope.documentMeta.typedSignatureEnabled}
-                      uploadSignatureEnabled={envelope.documentMeta.uploadSignatureEnabled}
-                      drawSignatureEnabled={envelope.documentMeta.drawSignatureEnabled}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
 
           <div className="mt-6 flex flex-col items-stretch gap-2 border-border border-t pt-4 [&_button]:w-full">
