@@ -62,6 +62,9 @@ export const ZDocumentAuditLogTypeSchema = z.enum([
   'DOCUMENT_RECIPIENT_CSC_SIGN_REQUESTED', // Recipient clicked Sign; CSC session created with captured per-item hashes.
   'DOCUMENT_RECIPIENT_CSC_AUTHORIZED', // Credential-scope OAuth complete; SAD attached to the CSC session.
   'DOCUMENT_RECIPIENT_CSC_SIGNED', // TSP returned signatures and they were embedded into the recipient's PDF bytes.
+
+  // Recipient file upload events.
+  'RECIPIENT_UPLOADED_FILE', // When a recipient uploads a file into a declared upload slot.
 ]);
 
 export const ZDocumentAuditLogEmailTypeSchema = z.enum([
@@ -817,6 +820,19 @@ export const ZDocumentAuditLogEventDocumentRecipientCscSignedSchema = z.object({
   }),
 });
 
+/**
+ * Event: Recipient uploaded a file into a declared upload slot.
+ */
+export const ZDocumentAuditLogEventRecipientUploadedFileSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.RECIPIENT_UPLOADED_FILE),
+  data: ZBaseRecipientDataSchema.extend({
+    slotKey: z.string(),
+    slotLabel: z.string(),
+    filename: z.string(),
+    sha256: z.string(),
+  }),
+});
+
 export const ZDocumentAuditLogBaseSchema = z.object({
   id: z.string(),
   createdAt: z.date(),
@@ -871,6 +887,7 @@ export const ZDocumentAuditLogSchema = ZDocumentAuditLogBaseSchema.and(
     ZDocumentAuditLogEventDocumentRecipientCscSignRequestedSchema,
     ZDocumentAuditLogEventDocumentRecipientCscAuthorizedSchema,
     ZDocumentAuditLogEventDocumentRecipientCscSignedSchema,
+    ZDocumentAuditLogEventRecipientUploadedFileSchema,
   ]),
 );
 

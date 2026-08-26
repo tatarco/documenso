@@ -4,6 +4,7 @@ import { finalizeTspEnvelopeCompletion } from '@documenso/ee/server-only/signing
 import { addRejectionStampToPdf } from '@documenso/lib/server-only/pdf/add-rejection-stamp-to-pdf';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
 import { generateCertificatePdf } from '@documenso/lib/server-only/pdf/generate-certificate-pdf';
+import { generateUploadsAppendixPdf } from '@documenso/lib/server-only/pdf/generate-uploads-appendix-pdf';
 import { getLastPageDimensions } from '@documenso/lib/server-only/pdf/get-page-size';
 import { prisma } from '@documenso/prisma';
 import { signPdf } from '@documenso/signing';
@@ -23,6 +24,7 @@ import { legacy_insertFieldInPDF } from '../../../server-only/pdf/legacy-insert-
 import { getTeamSettings } from '../../../server-only/team/get-team-settings';
 import { triggerWebhook } from '../../../server-only/webhooks/trigger/trigger-webhook';
 import { DOCUMENT_AUDIT_LOG_TYPE, type TDocumentAuditLog } from '../../../types/document-audit-logs';
+import { ZEnvelopeUploadRequirementsSchema } from '../../../types/envelope-upload';
 import { isTspEnvelope } from '../../../types/signature-level';
 import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../../types/webhook-payload';
 import { prefixedId } from '../../../universal/id';
@@ -67,6 +69,11 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
                 signature: true,
               },
             },
+          },
+        },
+        envelopeUploads: {
+          include: {
+            documentData: true,
           },
         },
       },
@@ -208,6 +215,62 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
     const needsCertificate = settings.includeSigningCertificate;
     const needsAuditLog = settings.includeAuditLog;
 
+    // Build the "uploaded files" appendix once - it doesn't depend on the
+    // per-envelope-item page size the way the certificate/audit log do.
+    const uploadsDoc = await (async () => {
+      if (envelope.envelopeUploads.length === 0) {
+        return null;
+      }
+
+      const entries = await Promise.all(
+        envelope.envelopeUploads.map(async (upload) => {
+          const recipient = envelope.recipients.find((r) => r.id === upload.recipientId);
+          const uploadRequirements = ZEnvelopeUploadRequirementsSchema.parse(recipient?.uploadRequirements ?? []);
+          const slotLabel = uploadRequirements.find((requirement) => requirement.key === upload.slotKey)?.label;
+
+          const bytes = await getFileServerSide(upload.documentData);
+
+          return {
+            slotLabel: slotLabel ?? upload.slotKey,
+            originalFilename: upload.originalFilename,
+            mimeType: upload.mimeType,
+            sha256: upload.sha256,
+            uploadedAt: upload.uploadedAt,
+            bytes,
+          };
+        }),
+      );
+
+      return generateUploadsAppendixPdf(entries);
+    })();
+
+    const uploadAuditLogs: TDocumentAuditLog[] = envelope.envelopeUploads.map((upload) => {
+      const recipient = envelope.recipients.find((r) => r.id === upload.recipientId);
+      const uploadRequirements = ZEnvelopeUploadRequirementsSchema.parse(recipient?.uploadRequirements ?? []);
+      const slotLabel = uploadRequirements.find((requirement) => requirement.key === upload.slotKey)?.label;
+
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      return {
+        ...createDocumentAuditLogData({
+          type: DOCUMENT_AUDIT_LOG_TYPE.RECIPIENT_UPLOADED_FILE,
+          envelopeId: envelope.id,
+          user: recipient ? { email: recipient.email, name: recipient.name } : null,
+          data: {
+            recipientEmail: recipient?.email ?? '',
+            recipientName: recipient?.name ?? '',
+            recipientId: upload.recipientId,
+            recipientRole: recipient?.role ?? '',
+            slotKey: upload.slotKey,
+            slotLabel: slotLabel ?? upload.slotKey,
+            filename: upload.originalFilename,
+            sha256: upload.sha256,
+          },
+        }),
+        id: '',
+        createdAt: upload.uploadedAt,
+      } as TDocumentAuditLog;
+    });
+
     const newDocumentData: Array<{ oldDocumentDataId: string; newDocumentDataId: string }> = [];
 
     for (const { envelopeItem, pdfData } of prefetchedItems) {
@@ -232,6 +295,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
             id: '',
             createdAt: new Date(),
           } as TDocumentAuditLog,
+          ...uploadAuditLogs,
         ];
 
         const certificatePayload = {
@@ -283,6 +347,7 @@ export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition
         pdfData,
         certificateDoc,
         auditLogDoc,
+        uploadsDoc,
       });
 
       newDocumentData.push(result);
@@ -366,6 +431,7 @@ type DecorateAndSignPdfOptions = {
   pdfData: Uint8Array;
   certificateDoc: PDF | null;
   auditLogDoc: PDF | null;
+  uploadsDoc: PDF | null;
 };
 
 /**
@@ -380,6 +446,7 @@ const decorateAndSignPdf = async ({
   pdfData,
   certificateDoc,
   auditLogDoc,
+  uploadsDoc,
 }: DecorateAndSignPdfOptions) => {
   let pdfDoc = await PDF.load(pdfData);
 
@@ -404,6 +471,13 @@ const decorateAndSignPdf = async ({
     await pdfDoc.copyPagesFrom(
       auditLogDoc,
       Array.from({ length: auditLogDoc.getPageCount() }, (_, index) => index),
+    );
+  }
+
+  if (uploadsDoc) {
+    await pdfDoc.copyPagesFrom(
+      uploadsDoc,
+      Array.from({ length: uploadsDoc.getPageCount() }, (_, index) => index),
     );
   }
 
