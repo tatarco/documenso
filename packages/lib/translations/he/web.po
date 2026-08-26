@@ -122,7 +122,7 @@ msgid "Everyone has signed"
 msgstr "כל הצדדים חתמו"
 
 msgid "Everyone has signed! You will receive an email copy of the signed document."
-msgstr "כל הצדדים חתמו. עותק חתום של המסמך יישלח אליך."
+msgstr "כל הצדדים חתמו."
 
 msgid "You will receive an email copy of the signed document once everyone has signed."
 msgstr "עותק חתום של המסמך יישלח אליך לאחר שכל הצדדים יחתמו."
@@ -246,3 +246,9 @@ msgstr "שמירת הערך נכשלה — יש לנסות שוב."
 
 msgid "Continue to fill"
 msgstr "המשך למילוי"
+
+msgid "Continue to review"
+msgstr "המשך לאישור"
+
+msgid "Review the filled document"
+msgstr "בדיקת המסמך הממולא לפני סיום"

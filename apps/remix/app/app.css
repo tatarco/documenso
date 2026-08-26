@@ -69,3 +69,17 @@
     --font-noto: "Noto Sans", "Noto Sans Korean", "Noto Sans Japanese", "Noto Sans Chinese";
   }
 }
+
+/* RTL shim: Tailwind physical margin utilities used across the signing UI
+   (icon gaps like mr-2) do not flip under dir="rtl". Mirror the common ones. */
+[dir='rtl'] .mr-1 { margin-right: 0; margin-left: 0.25rem; }
+[dir='rtl'] .mr-2 { margin-right: 0; margin-left: 0.5rem; }
+[dir='rtl'] .mr-3 { margin-right: 0; margin-left: 0.75rem; }
+[dir='rtl'] .mr-4 { margin-right: 0; margin-left: 1rem; }
+[dir='rtl'] .ml-1 { margin-left: 0; margin-right: 0.25rem; }
+[dir='rtl'] .ml-2 { margin-left: 0; margin-right: 0.5rem; }
+[dir='rtl'] .ml-3 { margin-left: 0; margin-right: 0.75rem; }
+[dir='rtl'] .ml-4 { margin-left: 0; margin-right: 1rem; }
+[dir='rtl'] :where(.space-x-2, .space-x-3, .space-x-4) > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 1;
+}
