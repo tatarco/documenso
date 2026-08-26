@@ -10,7 +10,7 @@ import { getRecipientByToken } from '@documenso/lib/server-only/recipient/get-re
 import { getRecipientSignatures } from '@documenso/lib/server-only/recipient/get-recipient-signatures';
 import { getUserByEmail } from '@documenso/lib/server-only/user/get-user-by-email';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
-import { getEnvelopeItemPdfUrl } from '@documenso/lib/utils/envelope-download';
+import { fetchPDF } from '@documenso/lib/client-only/download-pdf';
 import { trpc } from '@documenso/trpc/react';
 import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
 import { SigningCard3D } from '@documenso/ui/components/signing-card';
@@ -21,6 +21,7 @@ import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, FieldType, RecipientRole } from '@prisma/client';
 import { CheckCircle2, Clock8, DownloadIcon, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 
@@ -284,20 +285,7 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
             {document.envelopeItems.length > 0 && recipient?.token && (
               <div className="mt-10 hidden w-full max-w-[880px] px-4 lg:block">
                 {signingStatus === 'COMPLETED' || isDocumentCompleted(document) ? (
-                  <object
-                    data={getEnvelopeItemPdfUrl({
-                      type: 'download',
-                      envelopeItem: document.envelopeItems[0],
-                      token: recipient.token,
-                      version: 'signed',
-                    })}
-                    type="application/pdf"
-                    className="h-[80vh] w-full rounded-lg border border-border bg-background shadow-sm"
-                  >
-                    <p className="p-4 text-center text-muted-foreground text-sm">
-                      <Trans>Download</Trans>
-                    </p>
-                  </object>
+                  <SealedDocumentPreview envelopeItem={document.envelopeItems[0]} token={recipient.token} />
                 ) : (
                   <p className="flex items-center justify-center gap-2 text-center text-muted-foreground text-sm">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -328,3 +316,48 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
     </>
   );
 }
+
+
+type SealedDocumentPreviewProps = {
+  envelopeItem: { id: string; envelopeId: string; title: string };
+  token: string;
+};
+
+/**
+ * Inline preview of the sealed PDF. The download endpoint responds with
+ * Content-Disposition: attachment, which browsers refuse to render inline -
+ * so fetch it as a blob and preview the object URL instead.
+ */
+const SealedDocumentPreview = ({ envelopeItem, token }: SealedDocumentPreviewProps) => {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoked: string | null = null;
+
+    void fetchPDF({ envelopeItem, token, version: 'signed' })
+      .then(({ blob }) => {
+        revoked = URL.createObjectURL(blob);
+        setBlobUrl(revoked);
+      })
+      .catch(() => setBlobUrl(null));
+
+    return () => {
+      if (revoked) {
+        URL.revokeObjectURL(revoked);
+      }
+    };
+  }, [envelopeItem.id, token]);
+
+  if (!blobUrl) {
+    return null;
+  }
+
+  return (
+    <object
+      data={blobUrl}
+      type="application/pdf"
+      className="h-[80vh] w-full rounded-lg border border-border bg-background shadow-sm"
+      aria-label={envelopeItem.title}
+    />
+  );
+};
