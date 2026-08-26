@@ -240,8 +240,11 @@ export const DocumentSigningPageViewV2 = () => {
           </div>
         </div>
 
-        <div className="embed--DocumentContainer min-w-0 flex-1 overflow-y-auto" ref={scrollableContainerRef}>
-          <div className="flex flex-col">
+        <div
+          className={cn('embed--DocumentContainer min-w-0 flex-1', isFormMode ? 'overflow-hidden' : 'overflow-y-auto')}
+          ref={scrollableContainerRef}
+        >
+          <div className={cn('flex flex-col', isFormMode && 'h-full')}>
             {/* Horizontal envelope item selector */}
             {envelopeItems.length > 1 && (
               <div className="flex h-fit space-x-2 overflow-x-auto p-2 pt-4 sm:p-4">

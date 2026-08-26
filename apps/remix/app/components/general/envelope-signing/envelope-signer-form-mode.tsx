@@ -136,7 +136,26 @@ export default function EnvelopeSignerFormMode() {
     return entries;
   }, [sortedFields]);
 
-  const [addedCounts, setAddedCounts] = useState<Record<string, number>>({});
+  const [visibleExtra, setVisibleExtra] = useState<Record<string, number[]>>({});
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clearInstance = async (inst: any) => {
+    for (const { field } of inst.fields) {
+      if (!field.inserted) {
+        continue;
+      }
+
+      const emptyValue =
+        field.type === FieldType.CHECKBOX ? [] : field.type === FieldType.DATE ? false : null;
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await signField(field.id, { type: field.type, value: emptyValue } as any);
+      } catch {
+        // leave the field as-is; the inline error surface on the field covers it
+      }
+    }
+  };
 
   const commitField = async (
     field: (typeof sortedFields)[number],
@@ -411,25 +430,45 @@ export default function EnvelopeSignerFormMode() {
               }
 
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const filledCount = entry.instances.filter((i: any) => i.fields.some(({ field }: any) => field.inserted)).length;
-              const visible = Math.max(addedCounts[entry.title] ?? 0, filledCount);
+              const filledNs = entry.instances.filter((i: any) => i.fields.some(({ field }: any) => field.inserted)).map((i: any) => i.n);
+              const visibleNs = [...new Set([...(visibleExtra[entry.title] ?? []), ...filledNs])].sort((a, b) => a - b);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const nextInstance = entry.instances.find((i: any) => !visibleNs.includes(i.n));
 
               return (
                 <div key={entry.title} className="rounded-lg border border-border p-3">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm">{entry.title}</span>
                     <span className="text-muted-foreground text-xs">
-                      {visible}/{entry.instances.length}
+                      {visibleNs.length}/{entry.instances.length}
                     </span>
                   </div>
 
-                  {visible > 0 && (
+                  {visibleNs.length > 0 && (
                     <div className="mt-3 flex flex-col gap-y-3">
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      {entry.instances.slice(0, visible).map((inst: any) => (
+                      {entry.instances.filter((i: any) => visibleNs.includes(i.n)).map((inst: any) => (
                         <div key={inst.n} className="rounded-md border border-border/70 bg-muted/30 p-3">
-                          <div className="mb-2 font-medium text-muted-foreground text-xs">
-                            {entry.title} {inst.n}
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="font-medium text-muted-foreground text-xs">
+                              {entry.title} {inst.n}
+                            </span>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-muted-foreground text-xs hover:text-destructive"
+                              onClick={async () => {
+                                await clearInstance(inst);
+                                setVisibleExtra((prev) => ({
+                                  ...prev,
+                                  [entry.title]: (prev[entry.title] ?? []).filter((n) => n !== inst.n),
+                                }));
+                              }}
+                            >
+                              <Trans>Remove</Trans>
+                            </Button>
                           </div>
                           <div className="flex flex-col gap-y-3">
                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -440,13 +479,18 @@ export default function EnvelopeSignerFormMode() {
                     </div>
                   )}
 
-                  {visible < entry.instances.length && (
+                  {nextInstance && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="mt-3"
-                      onClick={() => setAddedCounts((prev) => ({ ...prev, [entry.title]: visible + 1 }))}
+                      onClick={() =>
+                        setVisibleExtra((prev) => ({
+                          ...prev,
+                          [entry.title]: [...(prev[entry.title] ?? []), nextInstance.n],
+                        }))
+                      }
                     >
                       + <Trans>Add</Trans>
                     </Button>

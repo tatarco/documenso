@@ -279,3 +279,6 @@ msgstr "ממולא"
 
 msgid "Add"
 msgstr "הוספה"
+
+msgid "Remove"
+msgstr "הסרה"
