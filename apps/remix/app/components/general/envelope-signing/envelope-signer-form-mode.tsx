@@ -150,7 +150,7 @@ export default function EnvelopeSignerFormMode() {
   };
 
   const documentPreview = (scrollRef: React.RefObject<HTMLDivElement | null>, withFields = false) => (
-    <div className={withFields ? 'pointer-events-none w-full' : 'w-full'}>
+    <div className={withFields ? 'form-mode-preview pointer-events-none w-full' : 'w-full'}>
       <EnvelopePdfViewer
         scrollParentRef={scrollRef}
         customPageRenderer={withFields ? EnvelopeSignerPageRenderer : undefined}
@@ -222,18 +222,8 @@ export default function EnvelopeSignerFormMode() {
    */
   return (
     <div className="flex h-full w-full">
-      {/* Read-only document preview (large screens only). */}
-      <div
-        ref={fillPreviewScrollRef}
-        className="hidden min-h-0 flex-1 overflow-y-auto border-border border-e bg-muted/30 lg:block"
-      >
-        <div className="mx-auto flex w-full max-w-[780px] flex-col items-center px-4 py-4">
-          {documentPreview(fillPreviewScrollRef, true)}
-        </div>
-      </div>
-
-      {/* The form. */}
-      <div className="min-h-0 w-full overflow-y-auto lg:w-[30rem] lg:flex-shrink-0">
+      {/* The form - first in DOM so it sits on the start side (right for RTL documents). */}
+      <div className="min-h-0 w-full overflow-y-auto border-border lg:w-[30rem] lg:flex-shrink-0 lg:border-e">
         <div className="flex min-h-full flex-col px-3 py-4 sm:px-5">
           <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="font-semibold text-foreground text-base">{envelope.title}</h2>
@@ -374,6 +364,16 @@ export default function EnvelopeSignerFormMode() {
               </p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Read-only document preview (large screens only). */}
+      <div
+        ref={fillPreviewScrollRef}
+        className="hidden min-h-0 flex-1 overflow-y-auto bg-muted/30 lg:block"
+      >
+        <div className="mx-auto flex w-full max-w-[780px] flex-col items-center px-4 py-4">
+          {documentPreview(fillPreviewScrollRef, true)}
         </div>
       </div>
     </div>
