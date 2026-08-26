@@ -650,6 +650,11 @@ export const formatDocumentAuditLogAction = (i18n: I18n, auditLog: TDocumentAudi
       you: msg`Your remote signature was applied`,
       user: msg`${user}'s remote signature was applied`,
     }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.RECIPIENT_UPLOADED_FILE }, () => ({
+      anonymous: msg`Recipient uploaded a file`,
+      you: msg`You uploaded a file`,
+      user: msg`${user} uploaded a file`,
+    }))
     .exhaustive();
 
   let selectedDescription = description.anonymous;

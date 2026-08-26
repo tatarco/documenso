@@ -58,6 +58,7 @@ export const ZRecipientLiteSchema = RecipientSchema.pick({
   authOptions: true,
   signingOrder: true,
   rejectionReason: true,
+  uploadRequirements: true,
 }).extend({
   // Backwards compatibility.
   documentId: z.number().nullish(),
