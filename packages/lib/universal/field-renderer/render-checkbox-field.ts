@@ -22,6 +22,27 @@ const calculateCheckboxSize = (fontSize: number) => {
   return fontSize;
 };
 
+/**
+ * Small overlay boxes (e.g. a single checkbox placed exactly over a printed
+ * form square) cannot fit the default padding + font-sized square - shrink and
+ * center the item inside the field rect instead of overflowing it.
+ */
+const calculateCompactLayout = (fieldWidth: number, fieldHeight: number, fontSize: number, itemCount: number) => {
+  const defaultItemSize = calculateCheckboxSize(fontSize);
+  const perItemHeight = fieldHeight / itemCount;
+
+  const isCompact = fieldWidth <= defaultItemSize + checkboxFieldPadding * 2 || perItemHeight <= defaultItemSize + checkboxFieldPadding * 2;
+
+  if (!isCompact) {
+    return { itemSize: defaultItemSize, padding: checkboxFieldPadding };
+  }
+
+  const itemSize = Math.max(6, Math.min(defaultItemSize, fieldWidth - 2, perItemHeight - 2));
+  const padding = Math.max(0, Math.min(checkboxFieldPadding, (Math.min(fieldWidth, perItemHeight) - itemSize) / 2));
+
+  return { itemSize, padding };
+};
+
 export const renderCheckboxFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
@@ -79,14 +100,16 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
     groupedItems.forEach((item, i) => {
       const { squareElement, checkmarkElement, textElement } = item;
 
+      const compactTransform = calculateCompactLayout(rectWidth, rectHeight, fontSize, checkboxValues.length);
+
       const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
         fieldWidth: rectWidth,
         fieldHeight: rectHeight,
         itemCount: checkboxValues.length,
         itemIndex: i,
-        itemSize: calculateCheckboxSize(fontSize),
+        itemSize: compactTransform.itemSize,
         spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
-        fieldPadding: checkboxFieldPadding,
+        fieldPadding: compactTransform.padding,
         direction: checkboxMeta?.direction || 'vertical',
         type: 'checkbox',
       });
@@ -142,7 +165,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       })
       .exhaustive();
 
-    const itemSize = calculateCheckboxSize(fontSize);
+    const { itemSize, padding: compactPadding } = calculateCompactLayout(fieldWidth, fieldHeight, fontSize, checkboxValues.length);
 
     const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
       fieldWidth,
@@ -151,7 +174,7 @@ export const renderCheckboxFieldElement = (field: FieldToRender, options: Render
       itemIndex: index,
       itemSize,
       spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
-      fieldPadding: checkboxFieldPadding,
+      fieldPadding: compactPadding,
       direction: checkboxMeta?.direction || 'vertical',
       type: 'checkbox',
     });

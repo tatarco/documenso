@@ -276,3 +276,6 @@ msgstr "חתום"
 msgctxt "Partially signed document (adjective)"
 msgid "Partial"
 msgstr "ממולא"
+
+msgid "Add"
+msgstr "הוספה"

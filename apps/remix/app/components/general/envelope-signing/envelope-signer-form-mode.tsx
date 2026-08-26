@@ -73,6 +73,71 @@ export default function EnvelopeSignerFormMode() {
       });
   }, [recipientFields, envelope.documentMeta.language]);
 
+  /**
+   * Structured form entries parsed from a label convention:
+   * - "Section :: Item"        -> collapsible section group
+   * - "Group :: #N :: Item"    -> repeating group (accordion instances, add-one-at-a-time)
+   * - anything else            -> flat field
+   * A group renders at the position of its first field, keeping table clusters together.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formEntries = useMemo<any[]>(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const entries: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sections = new Map<string, any>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const repeats = new Map<string, any>();
+
+    for (const field of sortedFields) {
+      const meta = field.fieldMeta;
+      const raw = (meta && 'label' in meta && meta.label) || '';
+      const parts = raw.split(' :: ');
+
+      if (parts.length === 3 && parts[1].startsWith('#')) {
+        const n = Number(parts[1].slice(1)) || 0;
+        let group = repeats.get(parts[0]);
+
+        if (!group) {
+          group = { kind: 'repeat', title: parts[0], instances: [] };
+          repeats.set(parts[0], group);
+          entries.push(group);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let inst = group.instances.find((i: any) => i.n === n);
+
+        if (!inst) {
+          inst = { n, fields: [] };
+          group.instances.push(inst);
+        }
+
+        inst.fields.push({ field, sub: parts[2] });
+      } else if (parts.length === 2) {
+        let group = sections.get(parts[0]);
+
+        if (!group) {
+          group = { kind: 'section', title: parts[0], fields: [] };
+          sections.set(parts[0], group);
+          entries.push(group);
+        }
+
+        group.fields.push({ field, sub: parts[1] });
+      } else {
+        entries.push({ kind: 'field', field });
+      }
+    }
+
+    for (const g of repeats.values()) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      g.instances.sort((a: any, b: any) => a.n - b.n);
+    }
+
+    return entries;
+  }, [sortedFields]);
+
+  const [addedCounts, setAddedCounts] = useState<Record<string, number>>({});
+
   const commitField = async (
     field: (typeof sortedFields)[number],
     value: string | number | number[] | boolean | null,
@@ -158,60 +223,117 @@ export default function EnvelopeSignerFormMode() {
     </div>
   );
 
-  /**
-   * STEP 1 - read the document before anything can be filled.
-   */
-  if (step === 'read') {
-    return (
-      <div className="flex h-full w-full flex-col">
-        <div ref={readScrollRef} className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-[820px] flex-col items-center px-2 py-4 sm:px-4">
-            <h2 className="mb-4 w-full font-semibold text-foreground text-lg">{envelope.title}</h2>
-            {documentPreview(readScrollRef)}
-          </div>
-        </div>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderFieldBlock = (field: any, subLabel?: string) => (
+    <div key={field.id}>
+            <Label htmlFor={`field-${field.id}`} className="flex items-center gap-2 text-sm">
+              <span>{subLabel ?? getFieldLabel(field)}</span>
 
-        <div className="sticky bottom-0 z-30 border-border border-t bg-background/95 p-3 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-[820px] items-center justify-between gap-4">
-            <span className="text-muted-foreground text-sm">
-              <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
-            </span>
+              {isFieldRequired(field) && !field.inserted && (
+                <span className="text-destructive" aria-hidden="true">
+                  *
+                </span>
+              )}
 
-            <Button size="lg" onClick={() => setStep('fill')}>
-              <PenLineIcon className="mr-2 h-4 w-4" />
-              <Trans>Continue to fill</Trans>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+              {field.inserted && <CheckIcon className="h-4 w-4 text-primary" />}
+              {pendingFieldId === field.id && <Loader2Icon className="h-4 w-4 animate-spin" />}
+            </Label>
 
-  /**
-   * STEP 2 - fill: form beside a read-only preview on large screens,
-   * form alone on small screens.
-   */
-  return (
-    <div className="flex h-full w-full">
-      {/* The form - first in DOM so it sits on the start side (right for RTL documents). */}
-      <div className="min-h-0 w-full overflow-y-auto border-border lg:w-[30rem] lg:flex-shrink-0 lg:border-e">
-        <div className="flex min-h-full flex-col px-3 py-4 sm:px-5">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="font-semibold text-foreground text-base">{envelope.title}</h2>
+            {errorFieldId === field.id && (
+              <p className="mt-1 text-destructive text-xs">
+                <Trans>Could not save the value. Please try again.</Trans>
+              </p>
+            )}
 
-            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setStep('read')}>
-              <Trans>View document</Trans>
-            </Button>
-          </div>
+            {field.type === FieldType.TEXT && renderTextLikeField(field, 'text')}
+            {field.type === FieldType.NUMBER && renderTextLikeField(field, 'number')}
+            {field.type === FieldType.EMAIL && renderTextLikeField(field, 'email')}
+            {field.type === FieldType.NAME && renderTextLikeField(field, 'text', fullName ?? '')}
+            {field.type === FieldType.INITIALS &&
+              renderTextLikeField(field, 'text', fullName ? extractInitials(fullName) : '')}
 
-          <div className="flex flex-col gap-y-4">
-            {sortedFields.map((field) => (
-              <div key={field.id}>
-                <Label htmlFor={`field-${field.id}`} className="flex items-center gap-2 text-sm">
-                  <span>{getFieldLabel(field)}</span>
+            {field.type === FieldType.DATE && (
+              <div className="mt-1.5">
+                <Button
+                  type="button"
+                  variant={field.inserted ? 'secondary' : 'outline'}
+                  size="sm"
+                  disabled={pendingFieldId === field.id}
+                  onClick={async () => commitField(field, !field.inserted)}
+                >
+                  {field.inserted ? (field.customText ?? '') : <Trans>Insert date</Trans>}
+                </Button>
+              </div>
+            )          <div className="flex flex-col gap-y-4">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {formEntries.map((entry: any) => {
+              if (entry.kind === 'field') {
+                return renderFieldBlock(entry.field);
+              }
 
-                  {isFieldRequired(field) && !field.inserted && (
-                    <span className="text-destructive" aria-hidden="true">
+              if (entry.kind === 'section') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const isOpen = entry.fields.some(({ field }: any) => field.inserted || isFieldRequired(field));
+
+                return (
+                  <details key={entry.title} className="rounded-lg border border-border" open={isOpen}>
+                    <summary className="cursor-pointer select-none px-3 py-2.5 font-medium text-sm">
+                      {entry.title}
+                      <span className="ms-2 text-muted-foreground text-xs">({entry.fields.length})</span>
+                    </summary>
+                    <div className="flex flex-col gap-y-4 border-border border-t px-3 pt-3 pb-3">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {entry.fields.map(({ field, sub }: any) => renderFieldBlock(field, sub))}
+                    </div>
+                  </details>
+                );
+              }
+
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const filledCount = entry.instances.filter((i: any) => i.fields.some(({ field }: any) => field.inserted)).length;
+              const visible = Math.max(addedCounts[entry.title] ?? 0, filledCount);
+
+              return (
+                <div key={entry.title} className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{entry.title}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {visible}/{entry.instances.length}
+                    </span>
+                  </div>
+
+                  {visible > 0 && (
+                    <div className="mt-3 flex flex-col gap-y-3">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {entry.instances.slice(0, visible).map((inst: any) => (
+                        <div key={inst.n} className="rounded-md border border-border/70 bg-muted/30 p-3">
+                          <div className="mb-2 font-medium text-muted-foreground text-xs">
+                            {entry.title} {inst.n}
+                          </div>
+                          <div className="flex flex-col gap-y-3">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {inst.fields.map(({ field, sub }: any) => renderFieldBlock(field, sub))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {visible < entry.instances.length && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setAddedCounts((prev) => ({ ...prev, [entry.title]: visible + 1 }))}
+                    >
+                      + <Trans>Add</Trans>
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>estructive" aria-hidden="true">
                       *
                     </span>
                   )}
