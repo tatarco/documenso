@@ -255,3 +255,24 @@ msgstr "בדיקת המסמך הממולא לפני סיום"
 
 msgid "The signed document is being finalized"
 msgstr "המסמך החתום בהכנה"
+
+msgid "Download Files"
+msgstr "הורדת קבצים"
+
+msgid "Select the files you would like to download."
+msgstr "בחירת הקבצים להורדה."
+
+msgctxt "Original document (adjective)"
+msgid "Original"
+msgstr "מקור"
+
+msgid "Original"
+msgstr "מקור"
+
+msgctxt "Signed document (adjective)"
+msgid "Signed"
+msgstr "חתום"
+
+msgctxt "Partially signed document (adjective)"
+msgid "Partial"
+msgstr "ממולא"

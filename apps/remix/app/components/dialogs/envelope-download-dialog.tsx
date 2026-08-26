@@ -81,7 +81,7 @@ export const EnvelopeDownloadDialog = ({
       };
     }
 
-    if (envelopeStatus === DocumentStatus.PENDING && !token && !isLegacy) {
+    if (envelopeStatus === DocumentStatus.PENDING && !isLegacy) {
       return {
         version: 'pending',
         label: t({ message: 'Partial', context: 'Partially signed document (adjective)' }),

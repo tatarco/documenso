@@ -40,14 +40,13 @@ export default function EnvelopeSignerFormMode() {
   const { envelope, recipientFields, recipientFieldsRemaining, signField, fullName, signature, setSignature } =
     useRequiredEnvelopeSigningContext();
 
-  const [step, setStep] = useState<'read' | 'fill' | 'review'>('read');
+  const [step, setStep] = useState<'read' | 'fill'>('read');
   const [pendingFieldId, setPendingFieldId] = useState<number | null>(null);
   const [errorFieldId, setErrorFieldId] = useState<number | null>(null);
   const [draftValues, setDraftValues] = useState<Record<number, string>>({});
 
   const readScrollRef = useRef<HTMLDivElement>(null);
   const fillPreviewScrollRef = useRef<HTMLDivElement>(null);
-  const reviewScrollRef = useRef<HTMLDivElement>(null);
 
   const sortedFields = useMemo(() => {
     return [...recipientFields]
@@ -189,34 +188,6 @@ export default function EnvelopeSignerFormMode() {
   }
 
   /**
-   * STEP 3 - review: the filled document, then complete.
-   */
-  if (step === 'review') {
-    return (
-      <div className="flex h-full w-full flex-col">
-        <div ref={reviewScrollRef} className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-[820px] flex-col items-center px-2 py-4 sm:px-4">
-            <h2 className="mb-4 w-full font-semibold text-foreground text-lg">
-              <Trans>Review the filled document</Trans>
-            </h2>
-            {documentPreview(reviewScrollRef, true)}
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 z-30 border-border border-t bg-background/95 p-3 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-[820px] items-center justify-between gap-4">
-            <Button variant="ghost" onClick={() => setStep('fill')}>
-              <Trans>Back to form</Trans>
-            </Button>
-
-            <EnvelopeSignerCompleteDialog />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /**
    * STEP 2 - fill: form beside a read-only preview on large screens,
    * form alone on small screens.
    */
@@ -348,18 +319,11 @@ export default function EnvelopeSignerFormMode() {
             ))}
           </div>
 
-          <div className="mt-6 border-border border-t pt-4">
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={recipientFieldsRemaining.length > 0}
-              onClick={() => setStep('review')}
-            >
-              <Trans>Continue to review</Trans>
-            </Button>
+          <div className="mt-6 flex flex-col items-stretch gap-2 border-border border-t pt-4 [&_button]:w-full">
+            <EnvelopeSignerCompleteDialog />
 
             {recipientFieldsRemaining.length > 0 && (
-              <p className="mt-2 text-center text-muted-foreground text-xs">
+              <p className="text-center text-muted-foreground text-xs">
                 <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
               </p>
             )}

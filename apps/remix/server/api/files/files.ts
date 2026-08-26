@@ -314,7 +314,11 @@ export const filesRoute = new Hono<HonoEnv>()
       const envelopeItem = await prisma.envelopeItem.findUnique({
         where: envelopeWhereQuery,
         include: {
-          envelope: true,
+          envelope: {
+            include: {
+              recipients: true,
+            },
+          },
           documentData: true,
         },
       });
@@ -325,6 +329,18 @@ export const filesRoute = new Hono<HonoEnv>()
 
       if (!envelopeItem.documentData) {
         return c.json({ error: 'Document data not found' }, 404);
+      }
+
+      if (version === 'pending') {
+        return await handleEnvelopeItemFileRequest({
+          title: envelopeItem.title,
+          envelopeItemId: envelopeItem.id,
+          envelope: envelopeItem.envelope,
+          documentData: envelopeItem.documentData,
+          version,
+          isDownload: true,
+          context: c,
+        });
       }
 
       return await handleEnvelopeItemFileRequest({
