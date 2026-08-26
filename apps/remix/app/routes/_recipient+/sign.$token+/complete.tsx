@@ -283,7 +283,7 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
 
             {/* Inline preview of the sealed document (desktop; mobile keeps the download path). */}
             {document.envelopeItems.length > 0 && recipient?.token && (
-              <div className="mt-10 hidden w-full max-w-[880px] px-4 lg:block">
+              <div className="mt-10 hidden w-[860px] max-w-[92vw] self-center px-0 lg:block">
                 {signingStatus === 'COMPLETED' || isDocumentCompleted(document) ? (
                   <SealedDocumentPreview envelopeItem={document.envelopeItems[0]} token={recipient.token} />
                 ) : (
