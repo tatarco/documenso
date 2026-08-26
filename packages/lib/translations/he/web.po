@@ -252,3 +252,6 @@ msgstr "המשך לאישור"
 
 msgid "Review the filled document"
 msgstr "בדיקת המסמך הממולא לפני סיום"
+
+msgid "The signed document is being finalized"
+msgstr "המסמך החתום בהכנה"

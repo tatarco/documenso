@@ -10,6 +10,7 @@ import { getRecipientByToken } from '@documenso/lib/server-only/recipient/get-re
 import { getRecipientSignatures } from '@documenso/lib/server-only/recipient/get-recipient-signatures';
 import { getUserByEmail } from '@documenso/lib/server-only/user/get-user-by-email';
 import { isDocumentCompleted } from '@documenso/lib/utils/document';
+import { getEnvelopeItemPdfUrl } from '@documenso/lib/utils/envelope-download';
 import { trpc } from '@documenso/trpc/react';
 import { DocumentShareButton } from '@documenso/ui/components/document/document-share-button';
 import { SigningCard3D } from '@documenso/ui/components/signing-card';
@@ -255,7 +256,7 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
                 className="w-full max-w-none md:flex-1"
               />
 
-              {isDocumentCompleted(document) && (
+              {(isDocumentCompleted(document) || signingStatus === 'COMPLETED') && (
                 <EnvelopeDownloadDialog
                   envelopeId={document.envelopeId}
                   envelopeStatus={document.status}
@@ -278,6 +279,33 @@ export default function CompletedSigningPage({ loaderData }: Route.ComponentProp
                 </Button>
               )}
             </div>
+
+            {/* Inline preview of the sealed document (desktop; mobile keeps the download path). */}
+            {document.envelopeItems.length > 0 && recipient?.token && (
+              <div className="mt-10 hidden w-full max-w-[880px] px-4 lg:block">
+                {signingStatus === 'COMPLETED' || isDocumentCompleted(document) ? (
+                  <object
+                    data={getEnvelopeItemPdfUrl({
+                      type: 'download',
+                      envelopeItem: document.envelopeItems[0],
+                      token: recipient.token,
+                      version: 'signed',
+                    })}
+                    type="application/pdf"
+                    className="h-[80vh] w-full rounded-lg border border-border bg-background shadow-sm"
+                  >
+                    <p className="p-4 text-center text-muted-foreground text-sm">
+                      <Trans>Download</Trans>
+                    </p>
+                  </object>
+                ) : (
+                  <p className="flex items-center justify-center gap-2 text-center text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Trans>The signed document is being finalized</Trans>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-center">
