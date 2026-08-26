@@ -277,7 +277,8 @@ export default function EnvelopeSignerFormMode() {
                 </SelectTrigger>
                 <SelectContent>
                   {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
-                    (option, index) => (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (option: any, index: number) => (
                       <SelectItem key={index} value={'value' in option ? option.value : String(index)}>
                         {'value' in option ? option.value : String(index)}
                       </SelectItem>
@@ -295,7 +296,8 @@ export default function EnvelopeSignerFormMode() {
                 onValueChange={async (value) => commitField(field, Number(value))}
               >
                 {(field.fieldMeta && 'values' in field.fieldMeta ? (field.fieldMeta.values ?? []) : []).map(
-                  (option, index) => (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (option: any, index: number) => (
                     <div key={index} className="flex items-center gap-2">
                       <RadioGroupItem id={`radio-${field.id}-${index}`} value={String(index)} />
                       <Label htmlFor={`radio-${field.id}-${index}`}>
@@ -498,7 +500,8 @@ const CheckboxFieldControl = ({ field, disabled, onCommit }: CheckboxFieldContro
 
   return (
     <div className="mt-1.5 flex flex-col gap-2">
-      {options.map((option, index) => (
+      {options.map(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (option: any, index: number) => (
         <div key={index} className="flex items-center gap-2">
           <Checkbox
             id={`checkbox-${field.id}-${index}`}
