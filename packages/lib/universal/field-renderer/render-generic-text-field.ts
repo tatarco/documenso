@@ -99,7 +99,11 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     isLabel = false;
     textToRender = field.customText;
 
-    textAlign = fieldMeta?.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
+    // RTL content (Hebrew/Arabic) reads from the right - align it that way
+    // unless the field explicitly sets an alignment.
+    const isRtlContent = /[\u0590-\u05ff\u0600-\u06ff]/.test(field.customText || '');
+
+    textAlign = fieldMeta?.textAlign || (isRtlContent ? 'right' : FIELD_DEFAULT_GENERIC_ALIGN);
 
     if (fieldMeta?.type === 'text' || fieldMeta?.type === 'number') {
       textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;

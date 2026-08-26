@@ -138,6 +138,53 @@ export default function EnvelopeSignerFormMode() {
 
   const [visibleExtra, setVisibleExtra] = useState<Record<string, number[]>>({});
 
+  /**
+   * Scroll the FORM (not the PDF) to the next required unfilled field,
+   * revealing its repeat instance / section if collapsed.
+   */
+  const scrollToNextFormField = () => {
+    const next = recipientFieldsRemaining[0];
+
+    if (!next) {
+      return;
+    }
+
+    const meta = next.fieldMeta;
+    const raw = (meta && 'label' in meta && meta.label) || '';
+    const parts = raw.split(' :: ');
+
+    if (parts.length === 3 && parts[1].startsWith('#')) {
+      const n = Number(parts[1].slice(1)) || 0;
+
+      setVisibleExtra((prev) => ({
+        ...prev,
+        [parts[0]]: [...new Set([...(prev[parts[0]] ?? []), n])],
+      }));
+    }
+
+    setTimeout(() => {
+      const el = document.querySelector(`[data-field-anchor="${next.id}"]`);
+
+      if (!el) {
+        return;
+      }
+
+      const details = el.closest('details');
+
+      if (details) {
+        details.open = true;
+      }
+
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      const input = el.querySelector('input, [role="combobox"], button');
+
+      if (input instanceof HTMLElement) {
+        input.focus();
+      }
+    }, 80);
+  };
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const clearInstance = async (inst: any) => {
     for (const { field } of inst.fields) {
@@ -244,7 +291,7 @@ export default function EnvelopeSignerFormMode() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderFieldBlock = (field: any, subLabel?: string) => (
-    <div key={field.id}>
+    <div key={field.id} data-field-anchor={field.id}>
             <Label htmlFor={`field-${field.id}`} className="flex items-center gap-2 text-sm">
               <span>{subLabel ?? getFieldLabel(field)}</span>
 
@@ -501,12 +548,18 @@ export default function EnvelopeSignerFormMode() {
           </div>
 
           <div className="mt-6 flex flex-col items-stretch gap-2 border-border border-t pt-4 [&_button]:w-full">
-            <EnvelopeSignerCompleteDialog />
+            {recipientFieldsRemaining.length > 0 ? (
+              <>
+                <Button type="button" size="lg" onClick={() => scrollToNextFormField()}>
+                  <Trans>Next Field</Trans>
+                </Button>
 
-            {recipientFieldsRemaining.length > 0 && (
-              <p className="text-center text-muted-foreground text-xs">
-                <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
-              </p>
+                <p className="text-center text-muted-foreground text-xs">
+                  <Plural value={recipientFieldsRemaining.length} one="1 Field Remaining" other="# Fields Remaining" />
+                </p>
+              </>
+            ) : (
+              <EnvelopeSignerCompleteDialog />
             )}
           </div>
         </div>

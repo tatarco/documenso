@@ -11,7 +11,7 @@ import { Separator } from '@documenso/ui/primitives/separator';
 import { Plural, Trans } from '@lingui/react/macro';
 import { EnvelopeType, RecipientRole } from '@prisma/client';
 import { BanIcon, DownloadCloudIcon } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link , useSearchParams } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { EnvelopeDownloadDialog } from '~/components/dialogs/envelope-download-dialog';
@@ -28,6 +28,9 @@ export const EnvelopeSignerHeader = () => {
 
   const isEmbedSigning = useEmbedSigningContext() !== null;
   const hasCustomBrandingLogo = envelopeData.settings.brandingEnabled && Boolean(envelopeData.settings.brandingLogo);
+
+  const [searchParams] = useSearchParams();
+  const isFormMode = searchParams.get('view') === 'form';
 
   return (
     <nav className="embed--DocumentWidgetHeader flex max-w-screen flex-row justify-between border-border border-b bg-background px-4 py-3 md:px-6">
@@ -73,7 +76,7 @@ export const EnvelopeSignerHeader = () => {
           <Plural one="1 Field Remaining" other="# Fields Remaining" value={recipientFieldsRemaining.length} />
         </p>
 
-        <EnvelopeSignerCompleteDialog />
+        {!isFormMode && <EnvelopeSignerCompleteDialog />}
       </div>
 
       {/* Mobile Actions button */}
