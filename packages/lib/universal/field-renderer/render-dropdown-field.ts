@@ -105,7 +105,7 @@ export const renderDropdownFieldElement = (field: FieldToRender, options: Render
     text: selectedValue,
     fontSize,
     fontFamily: konvaTextFontFamily,
-    fill: konvaTextFill,
+    fill: field.inserted && field.customText ? konvaTextFill : '#9ca3af',
     verticalAlign: 'middle',
     listening: false,
   });

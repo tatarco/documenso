@@ -145,7 +145,8 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
     fontFamily: konvaTextFontFamily,
-    fill: konvaTextFill,
+    // Placeholders render grey so unfilled labels can't be mistaken for values.
+    fill: isLabel ? '#9ca3af' : konvaTextFill,
     width: overflowLayout.width,
     height: overflowLayout.height,
   } satisfies Partial<Konva.TextConfig>);

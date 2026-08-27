@@ -3,6 +3,8 @@ import { TeamSchema } from '@documenso/prisma/generated/zod/modelSchema/TeamSche
 import { UserSchema } from '@documenso/prisma/generated/zod/modelSchema/UserSchema';
 import { z } from 'zod';
 
+import { ZEnvelopeUploadRequirementsSchema } from './envelope-upload';
+
 import { zEmail } from '../utils/zod';
 import { ZFieldSchema } from './field';
 
@@ -58,11 +60,11 @@ export const ZRecipientLiteSchema = RecipientSchema.pick({
   authOptions: true,
   signingOrder: true,
   rejectionReason: true,
-  uploadRequirements: true,
 }).extend({
   // Backwards compatibility.
   documentId: z.number().nullish(),
   templateId: z.number().nullish(),
+  uploadRequirements: ZEnvelopeUploadRequirementsSchema.nullish(),
 });
 
 /**
